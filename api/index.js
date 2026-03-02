@@ -25,13 +25,20 @@ const USERS = [
 ];
 
 function setAuthCookie(res, token) {
-  res.setHeader("Set-Cookie", `admin_token=${token}; HttpOnly; Path=/; Max-Age=${7 * 86400}; SameSite=Lax; Secure`);
+  res.setHeader("Set-Cookie", `admin_token=${token}; HttpOnly; Path=/; Max-Age=${7 * 86400}; SameSite=Lax`);
 }
 
 function getUserFromToken(req) {
+  // 1. Tentar Authorization header (Bearer token do localStorage)
+  const authHeader = req.headers.authorization ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  // 2. Tentar cookie HttpOnly
   const cookie = req.headers.cookie ?? "";
-    const match = cookie.match(/admin_token=([^;]+)/);
-  const token = match?.[1] ?? req.headers.authorization?.replace("Bearer ", "");
+  const match = cookie.match(/admin_token=([^;]+)/);
+  const cookieToken = match?.[1] ?? null;
+
+  const token = bearerToken ?? cookieToken;
   if (!token) return null;
   try {
     const payload = jwt.verify(token, JWT_SECRET);
@@ -40,7 +47,7 @@ function getUserFromToken(req) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -64,7 +71,21 @@ export default async function handler(req, res) {
 
       const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "7d" });
       setAuthCookie(res, token);
-      return res.status(200).json({ result: { data: { json: { id: user.id, name: user.name, email: user.email, role: user.role } } } });
+      const userData = { id: user.id, name: user.name, email: user.email, role: user.role };
+      // Retornar { token, user } — formato esperado pelo frontend solucoes
+      // e também { token, ...userData } — compatível com blog
+      return res.status(200).json({
+        result: {
+          data: {
+            json: {
+              token,
+              user: userData,
+              // campos flat para compatibilidade
+              ...userData,
+            }
+          }
+        }
+      });
     } catch (e) {
       return res.status(500).json({ error: { message: "Erro interno: " + e.message } });
     }
@@ -79,7 +100,7 @@ export default async function handler(req, res) {
 
   // ── POST /api/auth/logout ─────────────────────────────────
   if (url.includes("/api/trpc/auth.logout") || url.includes("/api/auth/logout")) {
-    res.setHeader("Set-Cookie", "admin_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax; Secure");
+    res.setHeader("Set-Cookie", "admin_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax");
     return res.status(200).json({ result: { data: { json: { ok: true } } } });
   }
 
@@ -89,20 +110,17 @@ export default async function handler(req, res) {
     return res.status(200).json({ error: { code: "UNAUTHORIZED", message: "Não autorizado" } });
   }
 
-  // ── Rotas de blog (mock simples) ──────────────────────────
-  if (url.includes("blog.list") || url.includes("dashboard.recentPosts")) {
-    return res.status(200).json({ result: { data: { json: [] } } });
-  }
+  // ── Rotas de admin (mock simples) ─────────────────────────
   if (url.includes("dashboard.stats")) {
     return res.status(200).json({ result: { data: { json: { posts: 0, leads: 0, categories: 0 } } } });
   }
-  if (url.includes("dashboard.recentLeads")) {
+  if (url.includes("dashboard.recentPosts") || url.includes("posts.list")) {
+    return res.status(200).json({ result: { data: { json: [] } } });
+  }
+  if (url.includes("dashboard.recentLeads") || url.includes("leads.list")) {
     return res.status(200).json({ result: { data: { json: [] } } });
   }
   if (url.includes("categories.list")) {
-    return res.status(200).json({ result: { data: { json: [] } } });
-  }
-  if (url.includes("leads.list")) {
     return res.status(200).json({ result: { data: { json: [] } } });
   }
   if (url.includes("settings.list")) {
