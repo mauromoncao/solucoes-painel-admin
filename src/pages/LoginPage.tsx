@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { trpc } from "../lib/trpc";
 import { useAuth } from "../contexts/AuthContext";
 import { Scale, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 const NAVY = "#19385C";
 const GOLD = "#E8B84B";
 
-// ── Emails autorizados (whitelist) ─────────────────────────
 const ALLOWED_EMAILS = [
   "mauromoncaoestudos@gmail.com",
   "mauromoncaoadv.escritorio@gmail.com",
@@ -20,6 +18,7 @@ export default function LoginPage() {
   const [pwd, setPwd]         = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [err, setErr]         = useState("");
+  const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   // ── Capturar token Google OAuth vindo da URL ───────────────
@@ -60,23 +59,52 @@ export default function LoginPage() {
     }
   }, []);
 
-  const loginMut = trpc.auth.login.useMutation({
-    onSuccess: (d: any) => { login(d.token, d.user); nav("/"); },
-    onError:   (e: any) => setErr(e.message ?? "Credenciais inválidas"),
-  });
-
-  const submit = (ev: React.FormEvent) => {
+  const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setErr("");
 
-    // Validar whitelist antes de tentar login
-    if (!ALLOWED_EMAILS.includes(email.toLowerCase().trim())) {
+    const emailNorm = email.toLowerCase().trim();
+
+    if (!ALLOWED_EMAILS.includes(emailNorm)) {
       setErr("⛔ Acesso não autorizado para este e-mail.");
       return;
     }
+    if (!emailNorm || !pwd) { setErr("Preencha e-mail e senha"); return; }
 
-    if (!email || !pwd) return setErr("Preencha e-mail e senha");
-    loginMut.mutate({ email, password: pwd });
+    setLoading(true);
+    try {
+      // Usar fetch direto — sem tRPC — para evitar race condition de token
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: emailNorm, password: pwd }),
+      });
+
+      const json = await res.json();
+      // Suporta dois formatos de resposta
+      const data = json?.result?.data?.json ?? json;
+
+      if (!res.ok || data?.error || !data?.token) {
+        const msg = data?.error?.message ?? data?.message ?? "Credenciais inválidas";
+        setErr(msg);
+        return;
+      }
+
+      // Salvar token, atualizar contexto e redirecionar
+      login(data.token, data.user ?? {
+        id: data.id ?? 0,
+        name: data.name ?? emailNorm,
+        email: emailNorm,
+        role: "admin",
+      });
+      window.location.href = "/";
+
+    } catch {
+      setErr("Erro de conexão. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Google OAuth ──────────────────────────────────────────
@@ -178,10 +206,10 @@ export default function LoginPage() {
             </div>
             <button
               type="submit"
-              disabled={loginMut.isPending}
+              disabled={loading}
               className="btn btn-gold w-full justify-center text-base py-3"
             >
-              {loginMut.isPending ? "Entrando..." : "Entrar"}
+              {loading ? "Entrando..." : "Entrar"}
             </button>
           </form>
         </div>

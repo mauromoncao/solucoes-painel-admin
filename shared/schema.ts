@@ -1,5 +1,4 @@
-import pgTable from "drizzle-orm/pg-core";
-import { serial, text, varchar, boolean, integer, timestamp, pgEnum, json } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, boolean, integer, timestamp, pgEnum, json } from "drizzle-orm/pg-core";
 
 export const roleEnum    = pgEnum("sp_admin_role",   ["admin", "editor"]);
 export const pageStatus  = pgEnum("sp_page_status",  ["draft", "published", "archived"]);
