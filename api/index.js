@@ -2,7 +2,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "BenAdmin2026!SecretJWT#Mauro";
+// ⚠️ SEGURANÇA: JWT_SECRET deve ser definido via variável de ambiente no VPS/plataforma
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // ── Usuários fixos no código ──────────────────────────────────
 const USERS = [
@@ -110,9 +111,9 @@ export default async function handler(req, res) {
     return res.status(200).json({ error: { code: "UNAUTHORIZED", message: "Não autorizado" } });
   }
 
-  // ── Rotas de admin (mock simples) ─────────────────────────
+  // ── Rotas de admin ─────────────────────────────────────────
   if (url.includes("dashboard.stats")) {
-    return res.status(200).json({ result: { data: { json: { posts: 0, leads: 0, categories: 0 } } } });
+    return res.status(200).json({ result: { data: { json: { posts: 0, leads: 0, categories: 0, pages: 0, videos: 0 } } } });
   }
   if (url.includes("dashboard.recentPosts") || url.includes("posts.list")) {
     return res.status(200).json({ result: { data: { json: [] } } });
@@ -123,13 +124,22 @@ export default async function handler(req, res) {
   if (url.includes("categories.list")) {
     return res.status(200).json({ result: { data: { json: [] } } });
   }
-  if (url.includes("settings.list")) {
-    return res.status(200).json({ result: { data: { json: [] } } });
+  if (url.includes("settings.list") || url.includes("settings.get")) {
+    return res.status(200).json({ result: { data: { json: {} } } });
   }
   if (url.includes("media.list")) {
     return res.status(200).json({ result: { data: { json: [] } } });
   }
   if (url.includes("faq.list")) {
+    return res.status(200).json({ result: { data: { json: [] } } });
+  }
+  if (url.includes("pages.list")) {
+    return res.status(200).json({ result: { data: { json: [] } } });
+  }
+  if (url.includes("videos.list")) {
+    return res.status(200).json({ result: { data: { json: [] } } });
+  }
+  if (url.includes("ctas.list")) {
     return res.status(200).json({ result: { data: { json: [] } } });
   }
 

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm run build:vercel",
+  "buildCommand": "npm run build:cf",
   "outputDirectory": "dist/public",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }

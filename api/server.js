@@ -1,4 +1,4 @@
-// api/server.js — Vercel Serverless Function Entry Point
+// api/server.js — Cloudflare Pages Function Entry Point
 // This file handles all /api/* requests as a serverless function
 
 import "dotenv/config";
@@ -19,9 +19,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 app.use(cors({
-  origin: process.env.VERCEL_URL
-    ? [`https://${process.env.VERCEL_URL}`, /\.vercel\.app$/, /\.mauromoncao\.adv\.br$/]
-    : true,
+  origin: process.env.CORS_ORIGIN
+    ? [process.env.CORS_ORIGIN, /\.mauromoncao\.adv\.br$/]
+    : [/\.mauromoncao\.adv\.br$/, "http://localhost:5173", "http://localhost:3000"],
   credentials: true
 }));
 app.use(express.json({ limit: "10mb" }));
