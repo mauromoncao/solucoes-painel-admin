@@ -69,7 +69,7 @@ const JWT_SECRET_OAUTH     = process.env.JWT_SECRET            ?? "sp-secret-202
 
 function getBaseUrl(req: express.Request): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  // Use CORS_ORIGIN from env
   return `${req.protocol}://${req.get("host")}`;
 }
 
